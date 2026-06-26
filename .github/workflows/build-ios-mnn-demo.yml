@@ -57,11 +57,11 @@ jobs:
           group = proj.main_group.find_subpath('AutoPatchedSources', true)
 
           files = [
-            '../../../source/backend/cpu/CPURoPE.cpp',
-            '../../../source/backend/cpu/compute/SharedGather.cpp',
-            '../../../source/backend/metal/MetalSharedGather.mm',
-            '../../../source/backend/metal/MetalTopKV2.mm',
-            '../../../source/backend/metal/MetalROIAlign.mm'
+            '../../source/backend/cpu/CPURoPE.cpp',
+            '../../source/backend/cpu/compute/SharedGather.cpp',
+            '../../source/backend/metal/MetalSharedGather.mm',
+            '../../source/backend/metal/MetalTopKV2.mm',
+            '../../source/backend/metal/MetalROIAlign.mm'
           ]
 
           existing = target.source_build_phase.files.map { |f| f.file_ref&.path }.compact
