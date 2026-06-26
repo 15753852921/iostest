@@ -33,10 +33,46 @@ jobs:
       - name: Clone MNN
         run: |
           git clone --depth 1 https://github.com/alibaba/MNN.git MNN
-      - name: Patch MNN Metal ROIAlign link issue
+
+      - name: Patch MNN iOS missing source files
         run: |
-          perl -0pi -e 's/\n\s*extern void ___MetalROIAlignCreator__OpType_ROIAlign__\(\);//g; s/\n\s*___MetalROIAlignCreator__OpType_ROIAlign__\(\);//g' MNN/source/backend/metal/MetalOPRegister.mm
-          grep -n "ROIAlign" MNN/source/backend/metal/MetalOPRegister.mm || true
+          set -euo pipefail
+
+          # Use C++ fallback instead of missing arm64 asm symbols.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("MNN/source/backend/cpu/compute/CommonOptFunction.cpp")
+          s = p.read_text()
+          s = s.replace("#ifndef __aarch64__\nstatic void MNNRankOneUpdateDefault", "#if 1\nstatic void MNNRankOneUpdateDefault")
+          p.write_text(s)
+          PY
+
+          sudo gem install xcodeproj
+
+          ruby <<'RUBY'
+          require 'xcodeproj'
+
+          proj = Xcodeproj::Project.open('MNN/project/ios/MNN.xcodeproj')
+          target = proj.targets.find { |t| t.name == 'MNN' }
+          group = proj.main_group.find_subpath('AutoPatchedSources', true)
+
+          files = [
+            '../../../source/backend/cpu/CPURoPE.cpp',
+            '../../../source/backend/cpu/compute/SharedGather.cpp',
+            '../../../source/backend/metal/MetalSharedGather.mm',
+            '../../../source/backend/metal/MetalTopKV2.mm',
+            '../../../source/backend/metal/MetalROIAlign.mm'
+          ]
+
+          existing = target.source_build_phase.files.map { |f| f.file_ref&.path }.compact
+          files.each do |path|
+            next if existing.include?(path)
+            ref = group.new_file(path)
+            target.add_file_references([ref])
+          end
+
+          proj.save
+          RUBY
 
       - name: Put STRLite model into official demo resource slot
         run: |
