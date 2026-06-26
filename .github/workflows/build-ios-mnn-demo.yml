@@ -33,6 +33,10 @@ jobs:
       - name: Clone MNN
         run: |
           git clone --depth 1 https://github.com/alibaba/MNN.git MNN
+      - name: Patch MNN Metal ROIAlign link issue
+        run: |
+          perl -0pi -e 's/\n\s*extern void ___MetalROIAlignCreator__OpType_ROIAlign__\(\);//g; s/\n\s*___MetalROIAlignCreator__OpType_ROIAlign__\(\);//g' MNN/source/backend/metal/MetalOPRegister.mm
+          grep -n "ROIAlign" MNN/source/backend/metal/MetalOPRegister.mm || true
 
       - name: Put STRLite model into official demo resource slot
         run: |
@@ -81,8 +85,11 @@ jobs:
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
             CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            IPHONEOS_DEPLOYMENT_TARGET=12.0 \
             clean build
-
           APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -path '*Release-iphoneos/demo.app' -type d | head -1)
           test -n "$APP_PATH"
           mkdir -p unsigned/Payload
